@@ -1,0 +1,1 @@
+{"B-ORG": 0, "O": 1, "B-MISC": 2, "B-PER": 3, "MULTI-WORD_PER": 4, "I-PER": 5, "B-LOC": 6, "MULTI-WORD_ORG": 7, "I-ORG": 8, "MULTI-WORD_MISC": 9, "I-MISC": 10, "MULTI-WORD_LOC": 11, "I-LOC": 12}
