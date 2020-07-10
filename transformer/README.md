@@ -30,7 +30,7 @@ The default model is `ner` (automatically downloaded), but built models can be g
 
 ```
 docker run -v $(pwd)/io:/opt/io \
-  registry.gitlab.inria.fr/comprise/development/text_transformer  \
+  registry.gitlab.inria.fr/comprise/text_transformer  \
   python transform.py io/inputs/test.txt io/test_anon.txt
 ```
 
