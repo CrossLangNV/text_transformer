@@ -274,7 +274,7 @@ def anonymize_corpus_placeholder(sent):
     return new_sent
 
 
-def transform_private_tokens(sentence, ne_table_list, ne_to_idxs,  i=0):
+def transform_private_tokens(sentence, ne_table_list, nes_to_idxs,  i=0):
     if i == 'REDACT':
         logger.info("Placeholder selected: {i}")
         new_sent = anonymize_corpus_placeholder(sentence)
