@@ -8,7 +8,7 @@ This repository gives access to the tools that have been used, implemented and/o
 
 
 If you use this tool, please cite:
-
+```
 @inproceedings{adelani:hal-02907939,
   TITLE = {{Privacy guarantees for de-identifying text transformations}},
   AUTHOR = {Adelani, David Ifeoluwa and Davody, Ali and Kleinbauer, Thomas and Klakow, Dietrich},
@@ -22,6 +22,7 @@ If you use this tool, please cite:
   HAL_ID = {hal-02907939},
   HAL_VERSION = {v1},
 }
+```
 
 
 
