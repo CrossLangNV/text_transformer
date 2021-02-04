@@ -7,6 +7,40 @@ This repository gives access to the tools that have been used, implemented and/o
 - The ["Model builder"](./model_builder) provides scipts to train a model. Documentation and installation instructions are in the [README](./model_builder/README.md).
 
 
+The transformer can also be run as a RESTful service using docker with the instruction:
+```
+docker run -d -p 5000:5000 --name comprise-tt registry.gitlab.inria.fr/comprise/text-transformer
+``` 
+*Note: depending on your docker installation, you may have to run docker with sudo privileges*
+
+The service is then listening on the port 5000 and expose the endpoint: `http://localhost:5000/transform`
+
+Here is an example of a call to this service in python:
+
+```
+import requests
+import json
+
+text_to_transform= 'I live in Berlin'
+ENDPOINT_URL = 'http://localhost:5000/transform'  # replace localhost with the proper hostname
+
+# Transformation parameters
+params = {'r': 'WORD'}
+
+# Call the service
+response = requests.post(ENDPOINT_URL, data=text_to_transform, params=json.dumps(params))
+
+# Get the result
+print(response.text)  #  'I live in Sweden'
+```
+
+Stop and start the service with:
+```
+docker stop comprise-tt
+docker start comprise-tt
+```
+ 
+
 If you use this tool, please cite:
 ```
 @inproceedings{adelani:hal-02907939,
@@ -23,6 +57,3 @@ If you use this tool, please cite:
   HAL_VERSION = {v1},
 }
 ```
-
-
-

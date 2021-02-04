@@ -25,12 +25,3 @@ usage: transform.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
 The default logging is INFO and the default replacement is FULL. Input file is one sentence per line. 
 The default model is `ner` (automatically downloaded), but built models can be given in the command line and should be stored in the `io` directory.
-
-## Use docker image
-
-```
-docker run -v $(pwd)/io:/opt/io \
-  registry.gitlab.inria.fr/comprise/text_transformer  \
-  python transform.py io/inputs/test.txt io/test_anon.txt
-```
-
