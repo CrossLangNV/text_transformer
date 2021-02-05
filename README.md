@@ -4,7 +4,7 @@ This repository gives access to the tools that have been used, implemented and/o
 
 - The ["Transformer"](./transformer) provides a script to apply this transformation. Documentation and installation instructions are in the [README](./transformer/README.md).
 
-- The ["Model builder"](./model_builder) provides scipts to train a model. Documentation and installation instructions are in the [README](./model_builder/README.md).
+- The ["Model builder"](./model_builder) provides scripts to train a model. Documentation and installation instructions are in the [README](./model_builder/README.md).
 
 
 The transformer can also be run as a RESTful service using docker with the instruction:
@@ -39,6 +39,15 @@ Stop and start the service with:
 docker stop comprise-tt
 docker start comprise-tt
 ```
+ 
+You can also use your locally stored models by mounting your models folder to the docker container:
+```
+docker run -d \
+    -p 5000:5000 \
+    -v "$(pwd)"/transformer/io/model:/opt/transformer/io/model \
+    --name comprise-tt \
+    registry.gitlab.inria.fr/comprise/text-transformer
+``` 
  
 
 If you use this tool, please cite:
