@@ -11,6 +11,7 @@ import json
 from flair.data import Sentence
 from flair.models import SequenceTagger
 import logging
+import numpy.random as npr
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +61,52 @@ def take_to_bio_format(labels):
 
     return bio_labels
 
+def identify_private_tokens_in_sentences(sents, model):
+    sentences = [Sentence(sent.strip()) for sent in sents]
+    # predict tags and print
+    model.predict(sentences)
+    tagged_sentences = [sent.to_tagged_string() for sent in sentences]
+
+    all_tagged_sents, all_coNLL_format_tags  = [], []
+
+    for tagged_sent in tagged_sentences:
+        tagged_words = tagged_sent.split()
+        coNLL_format_tags = []
+
+        for k, tagged_word in enumerate(tagged_words):
+            token = tagged_word
+            if token in ["<unk>", "[noise1]", "[noise2]", "umm", "ahh"]:
+                tag = 'O'
+                coNLL_format_tags.append([token, tag])
+                continue
+            if token.startswith('<') and token.endswith('>'):
+                continue
+
+            if k < len(tagged_words) - 1:
+                next_token = tagged_words[k + 1]
+            else:
+                next_token = ''
+
+            if next_token.startswith('<') and next_token.endswith('>'):
+                tag = next_token[1:-1]
+            else:
+                tag = 'O'
+            if tag != 'O':
+                coNLL_format_tags.append([token, tag[2:]])
+            else:
+                coNLL_format_tags.append([token, tag])
+
+        unzip = list(zip(*coNLL_format_tags))
+        tags = take_to_bio_format(list(unzip[1]))
+        coNLL_format_tags = list(zip(list(unzip[0]), tags))
+
+        all_tagged_sents.append(tagged_sent)
+        all_coNLL_format_tags.append(coNLL_format_tags)
+
+    return all_tagged_sents, all_coNLL_format_tags
+
 
 def identify_private_tokens(sentr, model):
-    model = SequenceTagger.load(model)
 
     sentence = Sentence(sentr.strip())
 
@@ -120,11 +164,13 @@ def getTaggedString(per_sent_tokens, predicted_tags):
                 break
         t = k
         t += 1
+
         if tag != "O":
-            tagged_string += new_token[:-1]
+            tagged_string += new_token[:-1] + " "
             #tagged_string += "'" + new_token[:-1]+"'<"+tag[2:]+"> "
         else:
             tagged_string += token + " "
+
 
     return tagged_string
 
@@ -150,18 +196,13 @@ def check_multiword(sent_o, tag_prefix='singleword'):
                 j += 1
             i = j
             # change single-word expression to have multiword NE type
-            '''
-            if tag_prefix == 'multiword':
-                tag =  re.split('[_ -]', act_label)[-1]
-                tag = 'MULTI-WORD_'+tag
-                word_feat = (n_first_ne, tag)
-            '''
         sent_new.append(word_feat)
         i += 1
     return sent_new
 
 
-def anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs):
+def anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs, replace_prob):
+    npr.seed(2)
     N_words = 50
 
     for ne_label, idx in nes_to_idxs.items():
@@ -184,6 +225,13 @@ def anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs):
             N_words = len(sent)
             new_token = token
             if ne == ne_label:
+                rand_val = npr.rand(1)[0]
+                # print(rand_val, prob, rand_val<prob)
+                if rand_val <= replace_prob:
+                    ne_idx = sel_ne_ids[per_no]
+                    new_token = ne_list[ne_idx]
+                    per_no += 1
+                '''
                 if token not in per_NE:
                     ne_idx = sel_ne_ids[per_no]
                     new_token = ne_list[ne_idx]
@@ -192,6 +240,7 @@ def anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs):
                 else:
                     new_token = per_NE[token]
                 # print(token, new_token)
+                '''
             new_sent.append((new_token, ne))
 
         sent = new_sent
@@ -202,7 +251,7 @@ def anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs):
 
 
 # multiword to multiword text transformation
-def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs):
+def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs, replace_prob):
     sent = check_multiword(sent, tag_prefix='multiword')
 
     N_words = 50
@@ -220,9 +269,6 @@ def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs):
 
         new_sent = []
 
-        # if 'MULTI-WORD' in ne_label:
-        #    sent = check_multiword(sent, tag_prefix='multiword')
-
         per_NE = dict()
         per_no = 0
         for k, word_label in enumerate(sent):
@@ -230,6 +276,12 @@ def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs):
             N_words = len(sent)
             new_token = token
             if ne == ne_label:
+                rand_val = npr.rand(1)[0]
+                if rand_val <= replace_prob:
+                    ne_idx = sel_ne_ids[per_no]
+                    new_token = ne_list[ne_idx]
+                    per_no += 1
+                '''
                 if token not in per_NE:
                     ne_idx = sel_ne_ids[per_no]
                     new_token = ne_list[ne_idx]
@@ -238,6 +290,8 @@ def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs):
                 else:
                     new_token = per_NE[token]
                 # print(token, new_token)
+                '''
+
             new_sent.append((new_token, ne))
 
         sent = new_sent
@@ -257,16 +311,20 @@ def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs):
     return anonynimized_sentence
 
 
-def anonymize_corpus_placeholder(sent):
+def anonymize_corpus_placeholder(sent, replace_prob):
     sent_ph = []
     new_sent = []
 
     for k, word_label in enumerate(sent):
         token, ne = word_label
         new_token = token
+
         if ne != 'O':
+            rand_val = npr.rand(1)[0]
+            if rand_val <= replace_prob:
+                new_token = "▮▮▮▮▮"
             # new_token = 'PLACEHOLDER'
-            new_token = '▮▮▮▮▮'
+            #new_token = '▮▮▮▮▮'
 
         new_sent.append((new_token, ne))
         sent_ph.append((token, ne))
@@ -274,20 +332,20 @@ def anonymize_corpus_placeholder(sent):
     return new_sent
 
 
-def transform_private_tokens(sentence, ne_table_list, nes_to_idxs,  i=0):
+def transform_private_tokens(sentence, ne_table_list, nes_to_idxs,  i=0, p=1.0):
     if i == 'REDACT':
         logger.info("Placeholder selected: {i}")
-        new_sent = anonymize_corpus_placeholder(sentence)
+        new_sent = anonymize_corpus_placeholder(sentence, p)
     elif i == 'WORD':
         logger.info("Word-by-word selected: {i}")
         new_sent = anonymize_sentence_singleword(sentence,
                                                  ne_table_list,
-                                                 nes_to_idxs)
+                                                 nes_to_idxs, p)
     elif i == 'FULL':
         logger.info("Full-entity selected: {i}")
         new_sent = anonymize_sentence_multiword(sentence,
                                                 ne_table_list,
-                                                nes_to_idxs)
+                                                nes_to_idxs, p)
     else:
         pass
 
@@ -329,6 +387,16 @@ if __name__ == "__main__":
     parser.add_argument('-m',
                         help='model for named entity recognition',
                         dest='model')
+    parser.add_argument('-data_format',
+                        help='sets the data preprocessing format',
+                        dest='data_format',
+                        choices=['cased', 'uncased', 'cased_nopunct', 'uncased_nopunct'],
+                        default='cased')
+    parser.add_argument('-p',
+                        help='replacement probability, p',
+                        dest='replace_prob',
+                        type=float,
+                        default=1.0)
     parser.add_argument('input',
                         help="file of sentences",
                         type=argparse.FileType('r'))
@@ -343,6 +411,8 @@ if __name__ == "__main__":
     else:
         model = 'ner'
 
+    transf_dir = transf_dir + 'bio_'+args.data_format+'/'
+
     logging.basicConfig(filename='text_transformer.log',
                         filemode='w',
                         level=getattr(logging,
@@ -353,7 +423,11 @@ if __name__ == "__main__":
 
     logger.info("File : {}\n".format(args.input))
 
+    model = SequenceTagger.load(model)
+
+    '''
     for sent in args.input:
+
         logger.info("Sentence: {}\n".format(sent))
 
         tagged_sent, tokens_tags = identify_private_tokens(sent, model)
@@ -364,5 +438,29 @@ if __name__ == "__main__":
                                                  nes_to_idxs,
                                                  i=args.replace_type)
         args.output.write(f"{tagged_string}\n")
+    '''
+
+    all_sent = []
+    for sent in args.input:
+        all_sent.append(sent)
+
+    all_tagged_sents, all_sents_tokens_tags = identify_private_tokens_in_sentences(all_sent, model)
+    for i in range(len(all_tagged_sents)):
+        tagged_sent = all_tagged_sents[i]
+        tokens_tags = all_sents_tokens_tags[i]
+        logger.info("Tagged sentence: {}\n".format(tagged_sent))
+
+        tagged_string = transform_private_tokens(tokens_tags,
+                                                 ne_table_list,
+                                                 nes_to_idxs,
+                                                 i=args.replace_type, p=args.replace_prob)
+        args.output.write(f"{tagged_string}\n")
+
 
     args.output.close()
+
+
+'''
+Example: 
+python transform.py -r WORD -p 0.7 io/inputs/test.txt io/outputs/test.txt
+'''
