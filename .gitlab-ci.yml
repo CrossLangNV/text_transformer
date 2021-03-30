@@ -7,3 +7,4 @@ build_image:
   script:
     - docker build -t registry.gitlab.inria.fr/comprise/text_transformer .
     - docker push registry.gitlab.inria.fr/comprise/text_transformer
+    - docker logout $CI_REGISTRY
