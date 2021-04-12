@@ -296,7 +296,7 @@ def anonymize_sentence_multiword(sent, ne_table_list, nes_to_idxs, replace_prob)
 
         sent = new_sent
 
-    new_sent = anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs)
+    new_sent = anonymize_sentence_singleword(sent, ne_table_list, nes_to_idxs,replace_prob)
 
     anonynimized_sentence = []
     for token, tag in new_sent:
